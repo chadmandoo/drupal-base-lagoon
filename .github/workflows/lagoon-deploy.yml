@@ -17,7 +17,7 @@ jobs:
           name="${name//\//-}"
           name="${name,,}"
           echo "name=$name" >> "$GITHUB_OUTPUT"
-      - uses: uselagoon/lagoon-action@v1
+      - uses: uselagoon/lagoon-action@v1.0.1
         with:
           action: deploy
           lagoon_project: drupal-base
