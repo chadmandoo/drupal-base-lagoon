@@ -1,0 +1,30 @@
+name: Lagoon Deploy
+on:
+  push:
+    branches: [main, "release/*"]
+  pull_request:
+    types: [opened, synchronize, reopened, edited]
+
+jobs:
+  deploy:
+    runs-on: [self-hosted, lagoon-local]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Resolve env name
+        id: env
+        run: |
+          name="${{ github.head_ref || github.ref_name }}"
+          name="${name//\//-}"
+          name="${name,,}"
+          echo "name=$name" >> "$GITHUB_OUTPUT"
+      - uses: uselagoon/lagoon-action@v1
+        with:
+          action: deploy
+          lagoon_project: drupal-base
+          lagoon_environment: ${{ steps.env.outputs.name }}
+          ssh_private_key: ${{ secrets.LAGOON_SSH_PRIVATE_KEY }}
+          lagoon_graphql_endpoint: ${{ secrets.LAGOON_GRAPHQL }}
+          lagoon_ssh_hostname: ${{ secrets.LAGOON_SSH_HOST }}
+          lagoon_port: ${{ secrets.LAGOON_SSH_PORT }}
+          wait_for_deployment: 'true'
+          max_deployment_timeout: '30'

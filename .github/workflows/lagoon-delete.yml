@@ -1,0 +1,40 @@
+name: Lagoon Delete
+on:
+  pull_request:
+    types: [closed]
+  delete:
+
+jobs:
+  teardown:
+    if: github.event_name != 'delete' || github.event.ref_type == 'branch'
+    runs-on: [self-hosted, lagoon-local]
+    steps:
+      - name: Compute env name
+        id: env
+        run: |
+          if [ "${{ github.event_name }}" = "delete" ]; then
+            name="${{ github.event.ref }}"
+          else
+            name="${{ github.head_ref }}"
+          fi
+          name="${name//\//-}"
+          name="${name,,}"
+          echo "name=$name" >> "$GITHUB_OUTPUT"
+      - name: Bootstrap lagoon CLI context
+        env:
+          KEY: ${{ secrets.LAGOON_SSH_PRIVATE_KEY }}
+        run: |
+          install -m 700 -d ~/.ssh
+          printf '%s\n' "$KEY" > ~/.ssh/lagoon_ci && chmod 600 ~/.ssh/lagoon_ci
+          touch ~/.lagoon-ci.yml
+          lagoon --config-file ~/.lagoon-ci.yml config add --lagoon ci \
+            --graphql "${{ secrets.LAGOON_GRAPHQL }}" \
+            --hostname "${{ secrets.LAGOON_SSH_HOST }}" \
+            --port "${{ secrets.LAGOON_SSH_PORT }}" \
+            --ssh-key ~/.ssh/lagoon_ci || true
+      - name: Delete environment
+        run: |
+          lagoon --config-file ~/.lagoon-ci.yml -l ci delete environment \
+            -p drupal-base \
+            -e "${{ steps.env.outputs.name }}" \
+            --force
