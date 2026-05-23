@@ -17,14 +17,31 @@ jobs:
           name="${name//\//-}"
           name="$(printf '%s' "$name" | tr '[:upper:]' '[:lower:]')"
           echo "name=$name" >> "$GITHUB_OUTPUT"
-      - uses: uselagoon/lagoon-action@v1.0.1
-        with:
-          action: deploy
-          lagoon_project: drupal-base
-          lagoon_environment: ${{ steps.env.outputs.name }}
-          ssh_private_key: ${{ secrets.LAGOON_SSH_PRIVATE_KEY }}
-          lagoon_graphql_endpoint: ${{ secrets.LAGOON_GRAPHQL }}
-          lagoon_ssh_hostname: ${{ secrets.LAGOON_SSH_HOST }}
-          lagoon_port: ${{ secrets.LAGOON_SSH_PORT }}
-          wait_for_deployment: 'true'
-          max_deployment_timeout: '30'
+      - name: Bootstrap lagoon CLI context
+        env:
+          KEY: ${{ secrets.LAGOON_SSH_PRIVATE_KEY }}
+          GRAPHQL: ${{ secrets.LAGOON_GRAPHQL }}
+          SSH_HOST: ${{ secrets.LAGOON_SSH_HOST }}
+          SSH_PORT: ${{ secrets.LAGOON_SSH_PORT }}
+        run: |
+          install -m 700 -d ~/.ssh
+          printf '%s\n' "$KEY" > ~/.ssh/lagoon_ci && chmod 600 ~/.ssh/lagoon_ci
+          cat > ~/.lagoon-ci.yml <<YAML
+          current: ci
+          default: ci
+          lagoons:
+            ci:
+              graphql: ${GRAPHQL}
+              hostname: ${SSH_HOST}
+              port: "${SSH_PORT}"
+              sshkey: ${HOME}/.ssh/lagoon_ci
+          YAML
+          lagoon --config-file ~/.lagoon-ci.yml -l ci whoami
+      - name: Trigger Lagoon branch deploy
+        run: |
+          lagoon --config-file ~/.lagoon-ci.yml -l ci deploy branch \
+            -p drupal-base \
+            -b "${{ steps.env.outputs.name }}" \
+            --force
+          echo "Deploy triggered for env: ${{ steps.env.outputs.name }}"
+          echo "Check progress via: lagoon -l local logs deployment -p drupal-base -e ${{ steps.env.outputs.name }} -f"
