@@ -13,9 +13,10 @@ jobs:
       - name: Resolve env name
         id: env
         run: |
-          name="${{ github.head_ref || github.ref_name }}"
-          name="${name//\//-}"
+          branch="${{ github.head_ref || github.ref_name }}"
+          name="${branch//\//-}"
           name="$(printf '%s' "$name" | tr '[:upper:]' '[:lower:]')"
+          echo "branch=$branch" >> "$GITHUB_OUTPUT"
           echo "name=$name" >> "$GITHUB_OUTPUT"
       - name: Bootstrap lagoon CLI context
         env:
@@ -41,7 +42,7 @@ jobs:
         run: |
           lagoon --config-file ~/.lagoon-ci.yml -l ci deploy branch \
             -p drupal-base \
-            -b "${{ steps.env.outputs.name }}" \
+            -b "${{ steps.env.outputs.branch }}" \
             --force
-          echo "Deploy triggered for env: ${{ steps.env.outputs.name }}"
+          echo "Deploy triggered for git branch '${{ steps.env.outputs.branch }}' (env name '${{ steps.env.outputs.name }}')"
           echo "Check progress via: lagoon -l local logs deployment -p drupal-base -e ${{ steps.env.outputs.name }} -f"
