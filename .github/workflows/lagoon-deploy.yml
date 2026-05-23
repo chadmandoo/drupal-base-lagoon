@@ -15,7 +15,7 @@ jobs:
         run: |
           name="${{ github.head_ref || github.ref_name }}"
           name="${name//\//-}"
-          name="${name,,}"
+          name="$(printf '%s' "$name" | tr '[:upper:]' '[:lower:]')"
           echo "name=$name" >> "$GITHUB_OUTPUT"
       - uses: uselagoon/lagoon-action@v1.0.1
         with:

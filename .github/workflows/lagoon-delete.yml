@@ -18,7 +18,7 @@ jobs:
             name="${{ github.head_ref }}"
           fi
           name="${name//\//-}"
-          name="${name,,}"
+          name="$(printf '%s' "$name" | tr '[:upper:]' '[:lower:]')"
           echo "name=$name" >> "$GITHUB_OUTPUT"
       - name: Bootstrap lagoon CLI context
         env:
